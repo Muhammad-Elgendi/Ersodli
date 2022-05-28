@@ -1,3 +1,32 @@
+normalize_text = function (text) {
+
+    //remove special characters
+    text = text.replace(/([^\u0621-\u063A\u0641-\u064A\u0660-\u0669a-zA-Z 0-9])/g, '');
+
+    //normalize Arabic
+    text = text.replace(/(آ|إ|أ)/g, 'ا');
+    text = text.replace(/(ة)/g, 'ه');
+    // text = text.replace(/(ئ|ؤ)/g, 'ء')
+    text = text.replace(/(ى)/g, 'ي');
+    text = text.replace(/(عبد ال)/g, 'عبدال');
+
+    //convert arabic numerals to english counterparts.
+    var starter = 0x660;
+    for (var i = 0; i < 10; i++) {
+        text.replace(String.fromCharCode(starter + i), String.fromCharCode(48 + i));
+    }
+
+    return text;
+}
+
+// Apply normalize_text() to all properties of the object
+preprocess = function(object){
+    for (var key in object) {  
+        object[key] = normalize_text(object[key])
+    }
+    return object;
+}
+
 function init_autoCompleteJS(json_object) {
 
     // The autoComplete.js Engine instance creator
@@ -14,7 +43,9 @@ function init_autoCompleteJS(json_object) {
                     //     "https://tarekraafat.github.io/autoComplete.js/demo/db/generic.json"
                     // );
                     // const data = await source.json();
-                    const data = await JSON.parse(json_object);
+                    var json = JSON.parse(json_object);
+                    var preprocessed = json.map(element => preprocess(element));
+                    const data = await preprocessed;
                     // Post Loading placeholder text
                     document
                         .getElementById("autoComplete")
@@ -61,7 +92,7 @@ function init_autoCompleteJS(json_object) {
                 // Modify Results Item Content
                 item.innerHTML = `
       <span style="text-overflow: ellipsis; white-space: nowrap; overflow: hidden;">
-        ${data.match}
+        ${data.value['الاسم']} ${data.value['الكود']}
       </span>
       <span style="display: flex; align-items: center; font-size: 13px; font-weight: 100; text-transform: uppercase; color: rgba(0,0,0,.2);">
         ${data.key}
@@ -101,7 +132,7 @@ function init_autoCompleteJS(json_object) {
     autoCompleteJS.input.addEventListener("selection", function (event) {
         $('#input').val('');
         $(".selection").html('');
-        $("#savebtn").attr("disabled", false);
+        $("#savebtn").attr("disabled", true);
         $("#exportbtn").attr("disabled", true);
 
         const feedback = event.detail;
@@ -113,11 +144,12 @@ function init_autoCompleteJS(json_object) {
 
         window.StudentID = StudentID;
         // Render selected choice to selection div
-        document.querySelector(".selection").innerHTML =  StudentName+'  '+StudentID;
+        document.querySelector(".selection").innerHTML = StudentName + '  ' + StudentID;
         // Replace Input value with the selected value
         autoCompleteJS.input.value = selection;
-        // Console log autoComplete data feedback
-        console.log(feedback);
+        console.log(StudentName);
+        // console.log(feedback);
+
     });
 
     // autoCompleteJS.input.addEventListener("close", function (event) {
@@ -187,12 +219,16 @@ var ExcelToJSON = function () {
             });
             workbook.SheetNames.forEach(function (sheetName) {
                 // Here is your object
-                window.excel_data = XLSX.utils.sheet_to_row_object_array(workbook.Sheets[sheetName],{range:5});
+                var excel_data = XLSX.utils.sheet_to_row_object_array(workbook.Sheets[sheetName], { range: 5 });
+                for(var i = 0; i < 5; i++){
+                    excel_data.unshift(excel_data[0]);
+                }                
+                window.excel_data = excel_data;
                 var json_object = JSON.stringify(window.excel_data);
                 // jQuery( '#xlx_json' ).val( json_object );
                 init_autoCompleteJS(json_object);
 
-                console.log( window.excel_data );
+                // console.log(window.excel_data);
 
             })
         };
@@ -211,13 +247,14 @@ function handleFileSelect(evt) {
     var xl2json = new ExcelToJSON();
     xl2json.parseExcel(files[0]);
     $('#upload').hide();
-    $('#title').text("Search in : " + files[0].name);
+    window.filename = files[0].name
+    $('#title').text("Type a new column name to add marks in : ");
     $('#col_name_input').show();
 }
 
 document.getElementById('upload').addEventListener('change', handleFileSelect, false);
 
-$('#input').on('change', function () {
+$('#input').on('keyup', function () {
     $("#savebtn").attr("disabled", false);
 })
 
@@ -226,6 +263,9 @@ function Save() {
     for (var i = 0; i < window.excel_data.length; i++) {
         if (window.excel_data[i]['الكود'] == window.StudentID) {
             window.excel_data[i][window.col_name] = $('#input').val();
+            // log student mark
+            console.log(window.col_name + " : "+$('#input').val())
+            break;
         }
     }
 
@@ -237,6 +277,7 @@ function Save() {
 
 function showControls() {
     $('#col_name_input').hide();
+    $('#title').text("Search in : "+window.filename);
     $('#controls').show();
     window.col_name = $('#col_name').val()
     $('#label_col').text(window.col_name + " :")
@@ -246,8 +287,8 @@ function showControls() {
 function ExportData() {
     // var wb = XLSX.utils.book_new();
 
-    // Enable RTL workbook
-    var wb = { Workbook: { Views: [{ RTL: true }] }, Sheets: {}, SheetNames: [] }
+    // To Enable RTL workbook change RTL: false to  RTL: true
+    var wb = { Workbook: { Views: [{ RTL: false }] }, Sheets: {}, SheetNames: [] }
 
     var ws = XLSX.utils.json_to_sheet(window.excel_data);
 

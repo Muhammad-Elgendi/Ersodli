@@ -2,7 +2,7 @@
 <br />
 <p align="center">
   <a href="https://github.com//Muhammad-Elgendi/Ersodli">
-    <img src="img/favicon.png" alt="Logo" width="80" height="80">
+    <img src="assets/img/favicon.png" alt="Logo" width="80" height="80">
   </a>
 
   <h3 align="center">Ersodli</h3>
