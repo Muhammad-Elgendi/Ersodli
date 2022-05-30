@@ -20,8 +20,8 @@ normalize_text = function (text) {
 }
 
 // Apply normalize_text() to all properties of the object
-preprocess = function(object){
-    for (var key in object) {  
+preprocess = function (object) {
+    for (var key in object) {
         object[key] = normalize_text(object[key])
     }
     return object;
@@ -134,6 +134,7 @@ function init_autoCompleteJS(json_object) {
         $(".selection").html('');
         $("#savebtn").attr("disabled", true);
         $("#exportbtn").attr("disabled", true);
+        $("#backbtn").attr("disabled", true);
 
         const feedback = event.detail;
         autoCompleteJS.input.blur();
@@ -220,9 +221,9 @@ var ExcelToJSON = function () {
             workbook.SheetNames.forEach(function (sheetName) {
                 // Here is your object
                 var excel_data = XLSX.utils.sheet_to_row_object_array(workbook.Sheets[sheetName], { range: 5 });
-                for(var i = 0; i < 5; i++){
+                for (var i = 0; i < 5; i++) {
                     excel_data.unshift(excel_data[0]);
-                }                
+                }
                 window.excel_data = excel_data;
                 var json_object = JSON.stringify(window.excel_data);
                 // jQuery( '#xlx_json' ).val( json_object );
@@ -264,7 +265,7 @@ function Save() {
         if (window.excel_data[i]['الكود'] == window.StudentID) {
             window.excel_data[i][window.col_name] = $('#input').val();
             // log student mark
-            console.log(window.col_name + " : "+$('#input').val())
+            console.log(window.col_name + " : " + $('#input').val())
             break;
         }
     }
@@ -277,7 +278,7 @@ function Save() {
 
 function showControls() {
     $('#col_name_input').hide();
-    $('#title').text("Search in : "+window.filename);
+    $('#title').text("Search in : " + window.filename);
     $('#controls').show();
     window.col_name = $('#col_name').val()
     $('#label_col').text(window.col_name + " :")
@@ -299,4 +300,13 @@ function ExportData() {
 
     XLSX.utils.book_append_sheet(wb, ws, "snap @ " + dateTime);
     XLSX.writeFile(wb, "output_" + dateTime + ".xlsx");
+    $("#backbtn").attr("disabled", false);
+}
+
+function back() {
+    $('#col_name_input').show();
+    $('#title').text("Search in : " + window.filename);
+    $('#controls').hide();
+    window.col_name = $('#col_name').val()
+    $('#label_col').text(window.col_name + " :")
 }
