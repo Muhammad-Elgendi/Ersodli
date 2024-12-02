@@ -38,11 +38,7 @@ function init_autoCompleteJS(json_object) {
                     document
                         .getElementById("autoComplete")
                         .setAttribute("placeholder", "Loading...");
-                    // Fetch External Data Source
-                    // const source = await fetch(
-                    //     "https://tarekraafat.github.io/autoComplete.js/demo/db/generic.json"
-                    // );
-                    // const data = await source.json();
+
                     var json = JSON.parse(json_object);
                     var preprocessed = json.map(element => preprocess(element));
                     const data = await preprocessed;
@@ -215,13 +211,51 @@ var ExcelToJSON = function () {
 
         reader.onload = function (e) {
             var data = e.target.result;
+
+            var fileExtension = file.name.split('.').pop().toLowerCase(); // Get file extension
+            console.log("Reading "+fileExtension+" file.")
+            // Validate fileExtension
+            if (fileExtension != 'xlsx') {
+                throw new Error("Invalid file extension, we only support xlsx files.");
+            }
+            // Determine file type and read accordingly
             var workbook = XLSX.read(data, {
                 type: 'binary'
             });
             workbook.SheetNames.forEach(function (sheetName) {
+                // Array of possible header values
+                var headerKeywords = ['كود الطالب', 'إسم الطالب','الكود','الإسم','الاسم','كود','ID','code','name'];
+
+                var sheet = workbook.Sheets[sheetName];
+
+                // Find the header row containing "الكود"
+                var headerRow = null;
+                var range = XLSX.utils.decode_range(sheet['!ref']); // Get the range of the sheet
+                
+                for (var R = range.s.r; R <= range.e.r; ++R) { // Iterate over rows
+                    for (var C = range.s.c; C <= range.e.c; ++C) { // Iterate over columns
+                        var cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+                        var cell = sheet[cellAddress];
+                        if (cell && headerKeywords.includes(cell.v)) { // Check if the cell value is in headerKeywords
+                            headerRow = R;
+                            break;
+                        }
+                    }
+                    if (headerRow !== null) break;
+                }
+                
+                // Validate if headerRow was found
+                if (headerRow === null) {
+                    throw new Error("Header row containing 'الكود' not found!");
+                }
+                
+                // Parse the sheet starting from the header row
+                var excel_data = XLSX.utils.sheet_to_json(sheet, { range: headerRow });
+
+
                 // Here is your object
-                var excel_data = XLSX.utils.sheet_to_row_object_array(workbook.Sheets[sheetName], { range: 5 });
-                for (var i = 0; i < 5; i++) {
+                // var excel_data = XLSX.utils.sheet_to_row_object_array(workbook.Sheets[sheetName], { range: 5 });
+                for (var i = 0; i < headerRow; i++) {
                     excel_data.unshift(excel_data[0]);
                 }
                 window.excel_data = excel_data;
@@ -296,10 +330,10 @@ function ExportData() {
     var today = new Date();
     var date = today.getFullYear() + '-' + (today.getMonth() + 1) + '-' + today.getDate();
     var time = today.getHours() + "-" + today.getMinutes() + "-" + today.getSeconds();
-    var dateTime = date + '__' + time;
+    var dateTime = date + '_' + time;
 
     XLSX.utils.book_append_sheet(wb, ws, "snap @ " + dateTime);
-    XLSX.writeFile(wb, "output_" + dateTime + ".xlsx");
+    XLSX.writeFile(wb, window.filename.split('.')[0].toLowerCase()+"_" + dateTime + ".xlsx");
     $("#backbtn").attr("disabled", false);
 }
 
